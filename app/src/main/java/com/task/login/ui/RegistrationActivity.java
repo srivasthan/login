@@ -19,6 +19,9 @@ import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputEditText;
 import com.jaredrummler.materialspinner.MaterialSpinner;
 import com.task.login.R;
+import com.task.login.Retrofit.Api;
+import com.task.login.Retrofit.ApiClient;
+import com.task.login.SessionManager;
 
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONArray;
@@ -35,33 +38,43 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 
 public class RegistrationActivity extends AppCompatActivity {
-    TextInputEditText name, mail, mobile, alternativeMobile, password, confirmPassword, modelNo, serialNo, contractDuration;
-    TextInputEditText priority, plotno, street, postcode, landmark;
-    ProgressDialog progressBar;
-    TextView eLogin;
-    List<String> getProductName = new ArrayList<>();
-    List<Integer> getProductId = new ArrayList<>();
-    List<String> getSubName = new ArrayList<>();
-    List<Integer> getSubId = new ArrayList<>();
-    List<String> getAmcName = new ArrayList<>();
-    List<Integer> getAmcId = new ArrayList<>();
-    List<String> getCountryName = new ArrayList<>();
-    List<Integer> getCountryId = new ArrayList<>();
-    List<String> getStateName = new ArrayList<>();
-    List<Integer> getStateId = new ArrayList<>();
-    List<String> getCity = new ArrayList<>();
-    List<Integer> getCityId = new ArrayList<>();
-    List<String> getLocation = new ArrayList<>();
-    List<Integer> getLocationId = new ArrayList<>();
-    int selectedSubproduct, selectedProductId, selectedAmcId, selectedCountryId, selectedStateId, selectedCityId, selectedLocationId;
-    MaterialSpinner spinner, subproduct, amc, country, state, city, location;
-    String spspinner, spsubproduct, spamc, spcountry, spstate, spcity, splocation;
+    private TextInputEditText name;
+    private TextInputEditText mail;
+    private TextInputEditText mobile;
+    private TextInputEditText alternativeMobile;
+    private TextInputEditText modelNo;
+    private TextInputEditText serialNo;
+    private TextInputEditText contractDuration;
+    private TextInputEditText priority, plotno, street, postcode, landmark;
+    private ProgressDialog progressBar;
+    private final List<String> getProductName = new ArrayList<>();
+    private final List<Integer> getProductId = new ArrayList<>();
+    private final List<String> getSubName = new ArrayList<>();
+    private final List<Integer> getSubId = new ArrayList<>();
+    private final List<String> getAmcName = new ArrayList<>();
+    private final List<Integer> getAmcId = new ArrayList<>();
+    private final List<String> getCountryName = new ArrayList<>();
+    private final List<Integer> getCountryId = new ArrayList<>();
+    private final List<String> getStateName = new ArrayList<>();
+    private final List<Integer> getStateId = new ArrayList<>();
+    private final List<String> getCity = new ArrayList<>();
+    private final List<Integer> getCityId = new ArrayList<>();
+    private final List<String> getLocation = new ArrayList<>();
+    private final List<Integer> getLocationId = new ArrayList<>();
+    private int selectedSubproduct, selectedProductId, selectedAmcId, selectedCountryId, selectedStateId, selectedCityId, selectedLocationId;
+    private MaterialSpinner spinner, subproduct, amc, country, state, city, location;
+    private String spspinner, spsubproduct, spamc, spcountry;
+    private SessionManager sessionManager;
+
+    public RegistrationActivity() {
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_registration);
 
+        sessionManager = new SessionManager(this);
         progressBar = new ProgressDialog(this);
         progressBar.setCancelable(true);
         progressBar.setMessage("Loading");
@@ -75,8 +88,6 @@ public class RegistrationActivity extends AppCompatActivity {
         mail = findViewById(R.id.edt_email);
         mobile = findViewById(R.id.edt_mobile);
         alternativeMobile = findViewById(R.id.edt_altmobile);
-        password = findViewById(R.id.edt_password);
-        confirmPassword = findViewById(R.id.edt_confirm_password);
         modelNo = findViewById(R.id.edt_modelno);
         serialNo = findViewById(R.id.serialno);
         contractDuration = findViewById(R.id.contract_duration);
@@ -94,7 +105,7 @@ public class RegistrationActivity extends AppCompatActivity {
         location = findViewById(R.id.location_id);
         Button register = findViewById(R.id.btn_register);
 
-        eLogin = findViewById(R.id.btn_login);
+        TextView eLogin = findViewById(R.id.btn_login);
         eLogin.setOnClickListener(v -> {
             finish();
             Intent mIntent = new Intent(RegistrationActivity.this, MainActivity.class);
@@ -106,6 +117,7 @@ public class RegistrationActivity extends AppCompatActivity {
         spinner.setOnItemSelectedListener(new MaterialSpinner.OnItemSelectedListener<String>() {
             @Override
             public void onItemSelected(MaterialSpinner view, int position, long id, String item) {
+                spinner.setError(null);
                 spspinner = "sn";
                 selectedProductId = getProductId.get(position);
                 invokeSubProductApi();
@@ -126,8 +138,9 @@ public class RegistrationActivity extends AppCompatActivity {
         subproduct.setOnItemSelectedListener(new MaterialSpinner.OnItemSelectedListener<String>() {
             @Override
             public void onItemSelected(MaterialSpinner view, int position, long id, String item) {
+                subproduct.setError(null);
                 spsubproduct = "sn";
-                selectedSubproduct = getSubId.get(0);
+                selectedSubproduct = getSubId.get(position);
             }
         });
         subproduct.setOnNothingSelectedListener(new MaterialSpinner.OnNothingSelectedListener() {
@@ -145,6 +158,7 @@ public class RegistrationActivity extends AppCompatActivity {
         amc.setOnItemSelectedListener(new MaterialSpinner.OnItemSelectedListener<String>() {
             @Override
             public void onItemSelected(MaterialSpinner view, int position, long id, String item) {
+                amc.setError(null);
                 spamc = "sn";
                 selectedAmcId = getAmcId.get(position);
             }
@@ -164,6 +178,7 @@ public class RegistrationActivity extends AppCompatActivity {
         country.setOnItemSelectedListener(new MaterialSpinner.OnItemSelectedListener<String>() {
             @Override
             public void onItemSelected(MaterialSpinner view, int position, long id, String item) {
+                country.setError(null);
                 spcountry = "sn";
                 selectedCountryId = getCountryId.get(position);
                 invokeStateApi();
@@ -184,7 +199,6 @@ public class RegistrationActivity extends AppCompatActivity {
         state.setOnItemSelectedListener(new MaterialSpinner.OnItemSelectedListener<String>() {
             @Override
             public void onItemSelected(MaterialSpinner view, int position, long id, String item) {
-                spstate = "sn";
                 selectedStateId = getStateId.get(position);
                 invokeCityApi();
             }
@@ -194,7 +208,6 @@ public class RegistrationActivity extends AppCompatActivity {
             @Override
             public void onNothingSelected(MaterialSpinner spinner) {
                 Snackbar.make(spinner, "Nothing selected", Snackbar.LENGTH_LONG).show();
-                spstate = "ns";
             }
         });
 
@@ -204,7 +217,6 @@ public class RegistrationActivity extends AppCompatActivity {
         city.setOnItemSelectedListener(new MaterialSpinner.OnItemSelectedListener<String>() {
             @Override
             public void onItemSelected(MaterialSpinner view, int position, long id, String item) {
-                spcity = "sn";
                 selectedCityId = getCityId.get(position);
                 invokeLocationId();
             }
@@ -214,7 +226,6 @@ public class RegistrationActivity extends AppCompatActivity {
             @Override
             public void onNothingSelected(MaterialSpinner spinner) {
                 Snackbar.make(spinner, "Nothing selected", Snackbar.LENGTH_LONG).show();
-                spcity = "ns";
             }
         });
 
@@ -224,7 +235,6 @@ public class RegistrationActivity extends AppCompatActivity {
         location.setOnItemSelectedListener(new MaterialSpinner.OnItemSelectedListener<String>() {
             @Override
             public void onItemSelected(MaterialSpinner view, int position, long id, String item) {
-                splocation = "sn";
                 selectedLocationId = getLocationId.get(position);
             }
         });
@@ -233,7 +243,6 @@ public class RegistrationActivity extends AppCompatActivity {
             @Override
             public void onNothingSelected(MaterialSpinner spinner) {
                 Snackbar.make(spinner, "Nothing selected", Snackbar.LENGTH_LONG).show();
-                splocation = "ns";
             }
         });
 
@@ -294,6 +303,8 @@ public class RegistrationActivity extends AppCompatActivity {
             street.setError("Please Enter Street");
         } else if (postcode.getText().toString().trim().isEmpty() || postcode.getText().toString().length() > 15) {
             postcode.setError("Please Enter Valid Postcode");
+        } else if (spcountry.equals("ns")) {
+            country.setError("Please Select Country");
         } else if (landmark.getText().toString().trim().isEmpty()) {
             landmark.setError("Please Enter Landmark");
         } else {
@@ -302,6 +313,13 @@ public class RegistrationActivity extends AppCompatActivity {
     }
 
     private void registerUser() {
+
+        progressBar = new ProgressDialog(this);
+        progressBar.setCancelable(true);
+        progressBar.setMessage("Loading");
+        progressBar.show();
+
+        Api apiInterface = ApiClient.getApiClient().create(Api.class);
 
         JSONObject orderData = new JSONObject();
         try {
@@ -328,25 +346,47 @@ public class RegistrationActivity extends AppCompatActivity {
             e.printStackTrace();
         }
 
-        JsonObjectRequest req = new JsonObjectRequest(com.android.volley.Request.Method.POST, "http://dev.kaspontech.com/djadmin/customer_registration/",
-                orderData,
-                new Response.Listener<JSONObject>() {
-                    @Override
-                    public void onResponse(JSONObject response) {
-                        Toast.makeText(RegistrationActivity.this, "Registered successfully", Toast.LENGTH_SHORT).show();
-                        Intent intent = new Intent(RegistrationActivity.this, HomeActivity.class);
-                        intent.putExtra("name", name.getText().toString().trim());
-                        startActivity(intent);
-                        finish();
-                    }
-                }, new Response.ErrorListener() {
+        retrofit2.Call<Void> call = apiInterface.userRegistration(orderData);
+        call.enqueue(new retrofit2.Callback<Void>() {
             @Override
-            public void onErrorResponse(VolleyError error) {
-                VolleyLog.e("Error: ", error.getMessage());
+            public void onResponse(@NotNull retrofit2.Call<Void> call, @NotNull retrofit2.Response<Void> response) {
+                sessionManager.setLogin(true);
+                Toast.makeText(RegistrationActivity.this, "Registered successfully", Toast.LENGTH_SHORT).show();
+                progressBar.dismiss();
+                Intent intent = new Intent(RegistrationActivity.this, HomeActivity.class);
+                intent.putExtra("name", name.getText().toString().trim());
+                startActivity(intent);
+                finish();
+            }
+
+            @Override
+            public void onFailure(@NotNull retrofit2.Call<Void> call, @NotNull Throwable t) {
+                progressBar.dismiss();
+                Toast.makeText(RegistrationActivity.this, "Something went wrong", Toast.LENGTH_SHORT).show();
             }
         });
 
-        Volley.newRequestQueue(this).add(req);
+
+//        JsonObjectRequest req = new JsonObjectRequest(com.android.volley.Request.Method.POST, "http://dev.kaspontech.com/djadmin/customer_registration/",
+//                orderData,
+//                new Response.Listener<JSONObject>() {
+//                    @Override
+//                    public void onResponse(JSONObject response) {
+//                        sessionManager.setLogin(true);
+//                        Toast.makeText(RegistrationActivity.this, "Registered successfully", Toast.LENGTH_SHORT).show();
+//                        Intent intent = new Intent(RegistrationActivity.this, HomeActivity.class);
+//                        intent.putExtra("name", name.getText().toString().trim());
+//                        startActivity(intent);
+//                        finish();
+//                    }
+//                }, new Response.ErrorListener() {
+//            @Override
+//            public void onErrorResponse(VolleyError error) {
+//                VolleyLog.e("Error: ", error.getMessage());
+//            }
+//        });
+//
+//        Volley.newRequestQueue(this).add(req);
     }
 
     private void invokeLocationId() {
@@ -385,12 +425,10 @@ public class RegistrationActivity extends AppCompatActivity {
                                 public void run() {
                                     selectedLocationId = 0;
                                     location.setItems("No Data");
-                                    splocation = "ns";
                                     Toast.makeText(RegistrationActivity.this, "No Location Present", Toast.LENGTH_SHORT).show();
                                 }
                             });
                         } else {
-                            splocation = "sn";
                             for (int i = 0; i < jsonArray1.length(); i++) {
                                 try {
                                     jsonObject = (JSONObject) jsonArray1.get(i);
@@ -450,14 +488,10 @@ public class RegistrationActivity extends AppCompatActivity {
                                     selectedLocationId = 0;
                                     city.setItems("No Data");
                                     location.setItems("No Data");
-                                    splocation = "ns";
-                                    spcity = "ns";
                                     Toast.makeText(RegistrationActivity.this, "NO City Present", Toast.LENGTH_SHORT).show();
                                 }
                             });
                         } else {
-                            spcity = "sn";
-                            splocation = "sn";
                             for (int i = 0; i < jsonArray1.length(); i++) {
                                 try {
                                     jsonObject = (JSONObject) jsonArray1.get(i);
@@ -522,16 +556,10 @@ public class RegistrationActivity extends AppCompatActivity {
                                     state.setItems("No Data");
                                     city.setItems("No Data");
                                     location.setItems("No Data");
-                                    spstate = "ns";
-                                    spcity = "ns";
-                                    splocation = "ns";
                                     Toast.makeText(RegistrationActivity.this, "No State Available", Toast.LENGTH_SHORT).show();
                                 }
                             });
                         } else {
-                            spstate = "sn";
-                            spcity = "sn";
-                            splocation = "sn";
                             for (int i = 0; i < jsonArray1.length(); i++) {
                                 try {
                                     jsonObject = (JSONObject) jsonArray1.get(i);
